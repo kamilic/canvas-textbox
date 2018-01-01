@@ -1,5 +1,5 @@
 # canvas-textbox
-[![travisCI](https://www.travis-ci.org/kamilic/demo.svg?branch=master)](https://www.travis-ci.org/kamilic/demo) [![codecov](https://codecov.io/gh/kamilic/demo/branch/master/graph/badge.svg)](https://codecov.io/gh/kamilic/demo)  
+[![travisCI](https://www.travis-ci.org/kamilic/canvas-textbox.svg?branch=master)](https://www.travis-ci.org/kamilic/canvas-textbox) [![codecov](https://codecov.io/gh/kamilic/canvas-textbox/branch/master/graph/badge.svg)](https://codecov.io/gh/kamilic/canvas-textbox)  
 带自动断句换行的 canvas 文本展示框。
 
 ### Usage 
