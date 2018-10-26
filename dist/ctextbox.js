@@ -1,8 +1,10 @@
 (function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-	typeof define === 'function' && define.amd ? define(factory) :
-	(global.Ctextbox = factory());
-}(this, (function () { 'use strict';
+	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('node.extend')) :
+	typeof define === 'function' && define.amd ? define(['node.extend'], factory) :
+	(global.Ctextbox = factory(global.extend));
+}(this, (function (extend) { 'use strict';
+
+extend = extend && extend.hasOwnProperty('default') ? extend['default'] : extend;
 
 var constant = {
     OUTPUT_TYPE_BASE64: 1,
@@ -124,7 +126,7 @@ var isPlainObject = function isPlainObject(obj) {
 	return typeof key === 'undefined' || hasOwn.call(obj, key);
 };
 
-var extend = function extend() {
+var extend$1 = function extend$$1() {
 	var options, name, src, copy, copyIsArray, clone;
 	var target = arguments[0];
 	var i = 1;
@@ -163,7 +165,7 @@ var extend = function extend() {
 						}
 
 						// Never move original objects, clone them
-						target[name] = extend(deep, clone, copy);
+						target[name] = extend$$1(deep, clone, copy);
 
 						// Don't bring in undefined values
 					} else if (typeof copy !== 'undefined') {
@@ -428,6 +430,9 @@ var clone_1 = createCommonjsModule(function (module) {
   }
 });
 
+/**
+ * @description 文字图层的集合
+ */
 var TextLayerCollection = function (_Array) {
     inherits(TextLayerCollection, _Array);
 
@@ -439,6 +444,11 @@ var TextLayerCollection = function (_Array) {
     return TextLayerCollection;
 }(Array);
 
+/**
+ * @description 图层的基础属性
+ * @typedef {Object} TextLayerConfigure
+ * 
+ */
 var DEFAULT_CONF = {
     fontSize: 20,
     fontFamily: "Microsoft YaHei, PingFang SC, Arial",
@@ -452,39 +462,53 @@ var DEFAULT_CONF = {
     forceNextLine: false
 };
 
-function integrateWithGetter(obj) {
-    return Object.defineProperties(obj, {
-        font: {
-            get: function get$$1() {
-                return this.fontSize + "px " + this.fontFamily;
-            }
+/**
+ * @description 文字图层的集合
+ */
+var TextLayer = function () {
+    /**
+     * 
+     * @param {String} text 
+     * @param {TextLayerConfigure} conf 
+     */
+    function TextLayer() {
+        var text = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "";
+        var conf = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : clone_1(DEFAULT_CONF);
+        classCallCheck(this, TextLayer);
+
+        this.textRect = [];
+        conf.text = text;
+        extend(this, DEFAULT_CONF, conf);
+    }
+
+    createClass(TextLayer, [{
+        key: "font",
+        get: function get$$1() {
+            return this.fontSize + "px " + this.fontFamily;
         }
-    });
-}
+    }]);
+    return TextLayer;
+}();
 
-var TextLayer = function TextLayer() {
-    var text = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "";
-    var conf = arguments[1];
-    classCallCheck(this, TextLayer);
-
-    this.textRect = [];
-    var defaultConf = clone_1(DEFAULT_CONF);
-    var currentConf = conf && integrateWithGetter(extend(defaultConf, conf)) || defaultConf;
-    currentConf.text = text;
-    integrateWithGetter(this);
-    return extend(this, currentConf);
-};
+var DEBUG = false;
 
 /**
+ * @description 绘图配置
+ * @typedef {Object} RendererConfig
+ * @param {Number} option.width - 绘图框宽度
+ * @param {Number} option.top - 绘图框所在位置
+ * @param {Number} option.left - 绘图框所在位置
+ * @param {Number} option.autoHeight - 根据算出来的画布高度来设定 canvas 高度
+ */
+
+/**
+ * @description 协商与传入宽度最适合的字符串以及一些位置信息
  * @param {CanvasRenderingContext2D} ctx
  * @param {TextLayer} layer
  * @param {Number} currentPos
  * @param {Number} maxWidth
- * @returns {{pos: number, textWidth: Number, text, nextLine: boolean}}
- * @this Renderer
+ * @return {SuitableTextResult | null}
  */
-var DEBUG = false;
-
 function consultForSuitableText(ctx, layer, currentPos, maxWidth) {
     var text = layer.text.slice(currentPos);
     var textWidth = ctx.measureText(text).width;
@@ -502,6 +526,7 @@ function consultForSuitableText(ctx, layer, currentPos, maxWidth) {
             var _textWidth = void 0;
             var addOneCharTextWidth = void 0;
 
+            // 这里用了 二分法 来不断缩减字符直到小于传入宽度
             do {
                 pos = Math.floor(_text.length / 2);
                 halfPos = pos;
@@ -512,6 +537,7 @@ function consultForSuitableText(ctx, layer, currentPos, maxWidth) {
                 _resultWidth = ctx.measureText(_text).width + this.previousDrawingWidth;
             } while (_resultWidth >= maxWidth);
 
+            // 再用了 二分法 来不断增加字符来逼近最大绘图宽度
             while (!(_resultWidth <= maxWidth && addOneCharResultWidth > maxWidth)) {
                 if (halfPos === 1 && _resultWidth > maxWidth) {
                     pos -= 1;
@@ -526,6 +552,15 @@ function consultForSuitableText(ctx, layer, currentPos, maxWidth) {
                 addOneCharResultWidth = addOneCharTextWidth + this.previousDrawingWidth;
                 _resultWidth = _textWidth + this.previousDrawingWidth;
             }
+
+            /**
+             * @description 计算与宽度最佳匹配行的数据结构
+             * @typedef {Object} SuitableTextResult
+             * @param {Number} pos - 
+             * @param {Number} textWidth
+             * @param {String} text
+             * @param {Boolean} nextLine
+             */
             return {
                 pos: currentPos + pos - 1,
                 textWidth: _textWidth,
@@ -540,46 +575,37 @@ function consultForSuitableText(ctx, layer, currentPos, maxWidth) {
                 nextLine: false
             };
         }
+    } else {
+        return null;
     }
 }
 
-function getRealLineHeight(lineHeight, fontSize) {
-    if (typeof lineHeight === "number") {
-        return parseFloat((lineHeight * fontSize).toFixed(2));
-    } else if (typeof lineHeight === "string") {
-        return parseInt(lineHeight);
-    }
-}
-
-function nextLine() {
-    this.previousDrawingWidth = 0;
-    this.currentLine += 1;
-    this.eachLine[this.eachLine.length] = {
-        inlineElements: []
-    };
-}
-
-function reset() {
-    this.previousDrawingWidth = 0;
-    this.currentLine = 1;
-}
-
-function calculate(ctx, collection, maxWidthOrConf, isIncremental) {
+/**
+ * @private
+ * @description 对 TextLayerCollection 遍历并根据给予的最大宽度最优匹配计算，最后获得所有可供 canvas 处理的位置信息和内容信息
+ * @this Renderer
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {TextLayerCollection} collection
+ * @param {RendererConfig} config
+ */
+function calculate(ctx, collection, config) {
     var _this = this;
 
-    var _maxWidthConfHander = maxWidthConfHander(maxWidthOrConf),
-        top = _maxWidthConfHander.top,
-        left = _maxWidthConfHander.left,
-        maxWidth = _maxWidthConfHander.maxWidth;
+    var _Renderer$configHandl = Renderer.configHandler(config),
+        top = _Renderer$configHandl.top,
+        left = _Renderer$configHandl.left,
+        maxWidth = _Renderer$configHandl.maxWidth;
 
     var textBoxHeight = 0;
     var textBoxWidth = maxWidth;
-    if (!isIncremental) {
+
+    if (!config.isIncremental) {
         this.eachLine = [{
             inlineElements: []
         }];
     }
 
+    // 遍历 collection 中的每个子层，把子层的文本切成一个个合适长度的文本段
     collection.forEach(function (layer) {
         ctx.save();
         ctx.font = layer.font;
@@ -619,7 +645,7 @@ function calculate(ctx, collection, maxWidthOrConf, isIncremental) {
     this.eachLine.forEach(function (line) {
         var inlineElements = line.inlineElements;
         var lineLineHeight = inlineElements.length > 0 ? Math.max.apply(null, inlineElements.map(function (v) {
-            return getRealLineHeight(v.layer.lineHeight, v.layer.fontSize);
+            return Renderer.getRealLineHeight(v.layer.lineHeight, v.layer.fontSize);
         })) : 0;
         line.lineHeight = lineLineHeight;
         line.lineBoxX = left;
@@ -643,7 +669,17 @@ function calculate(ctx, collection, maxWidthOrConf, isIncremental) {
     this.lastReflowIndex = collection.length - 1;
 }
 
-function _draw$1(ctx) {
+/**
+ * @private
+ * @description 核心绘图方法
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {RendererConfig} config
+ */
+function _draw(ctx, config) {
+    if (config.autoHeight) {
+        ctx.canvas.height = this.height;
+    }
+
     this.eachLine.forEach(function (line) {
         var inlineElements = line.inlineElements;
         var lineHeight = line.lineHeight; // px
@@ -656,11 +692,11 @@ function _draw$1(ctx) {
             ctx.fillStyle = layer.color || ctx.fillStyle;
             ctx.strokeStyle = layer.strokeColor || "transparent";
             ctx.lineWidth = parseInt(layer.strokeWidth) || ctx.strokeWidth;
+            var paddingTop = layer.padding;
 
             if (layer.backgroundColor) {
                 var layerFontSize = layer.fontSize;
                 var deltaY = el.deltaY;
-                var paddingTop = layer.padding;
                 ctx.save();
                 ctx.fillStyle = layer.backgroundColor;
                 ctx.fillRect(el.x, el.y + paddingTop, el.textWidth, -(layerFontSize + paddingTop));
@@ -678,23 +714,12 @@ function _draw$1(ctx) {
     });
 }
 
-function maxWidthConfHander() {
-    var maxWidthOrConf = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 300;
-
-    var maxWidth = void 0;
-    var top = 0;
-    var left = 0;
-
-    if ((typeof maxWidthOrConf === "undefined" ? "undefined" : _typeof(maxWidthOrConf)) === "object") {
-        maxWidth = maxWidthOrConf.maxWidth || 300;
-        top = maxWidthOrConf.top || 0;
-        left = maxWidthOrConf.left || 0;
-    } else if (!parseInt(maxWidthOrConf)) {
-        throw Error("Type maxWidth error! expect Number.");
-    } else {
-        maxWidth = parseInt(maxWidthOrConf) || 300;
-    }
-    return { top: top, left: left, maxWidth: maxWidth };
+function nextLine() {
+    this.previousDrawingWidth = 0;
+    this.currentLine += 1;
+    this.eachLine[this.eachLine.length] = {
+        inlineElements: []
+    };
 }
 
 var Renderer = function () {
@@ -702,57 +727,142 @@ var Renderer = function () {
         classCallCheck(this, Renderer);
 
         this.previousDrawingWidth = 0;
+        this.currentLine = 1;
         this.width = 0;
         this.height = 0;
         this.top = 0;
         this.left = 0;
         this.lastReflowIndex = 0;
-        this.forceReflow = false;
         this.eachLine = [];
     }
 
+    /**
+     * @description 获取宽度与位置的的配置
+     * @param config
+     * @return {RendererConfig}
+     */
+
+
     createClass(Renderer, [{
         key: "draw",
-        value: function draw(ctx, collection, maxWidthOrConf, isReflow) {
-            if (!isReflow && !this.forceReflow) {
+
+
+        /**
+         * @description 绘图
+         * @param {CanvasRenderingContext2D} ctx 
+         * @param {TextLayerCollection} collection 
+         * @param {RendererConfig} config 
+         */
+        value: function draw(ctx, collection) {
+            var config = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {
+                width: 300,
+                reflow: false,
+                top: 0,
+                left: 0,
+                autoHeight: false,
+                isIncremental: false
+            };
+
+
+            // 判断是否只做增量重排
+            if (config.isIncremental) {
                 // partially reflow
-                this.reflow(ctx, collection.slice(this.lastReflowIndex + 1), maxWidthOrConf, true);
+                this.reflow(ctx, collection.slice(this.lastReflowIndex + 1), config);
             } else {
-                reset.call(this);
-                this.reflow(ctx, collection, maxWidthOrConf, false);
+                this.reset(this);
+                this.reflow(ctx, collection, config);
             }
-            _draw$1.call(this, ctx);
+
+            _draw.call(this, ctx, config);
         }
+
+        /**
+         * @description 图层重排，重新根据 collection 来计算出各行子元素所在位置以及内容宽度
+         * @param {CanvasRenderingContext2D} ctx 
+         * @param {TextLayerCollection} collection 
+         * @param {RendererConfig} config 
+         */
+
     }, {
         key: "reflow",
-        value: function reflow(ctx, collection, maxWidthOrConf, isIncremental) {
-            calculate.call(this, ctx, collection, maxWidthOrConf, isIncremental);
+        value: function reflow(ctx, collection) {
+            var config = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {
+                width: 300,
+                top: 0,
+                left: 0,
+                autoHeight: false,
+                // 增量绘图
+                isIncremental: false
+            };
+
+            calculate.call(this, ctx, collection, config, config.isIncremental);
         }
+
+        /**
+         * @description 重置 renderer 的执行上下文变量
+         */
+
+    }, {
+        key: "reset",
+        value: function reset() {
+            this.previousDrawingWidth = 0;
+            this.currentLine = 1;
+            this.width = 0;
+            this.height = 0;
+            this.top = 0;
+            this.left = 0;
+            this.lastReflowIndex = 0;
+            this.eachLine = [];
+        }
+
+        /**
+         * 
+         * @param {CanvasRenderingContext2D} ctx 
+         */
+
     }, {
         key: "clear",
         value: function clear(ctx) {
             ctx.clearRect(this.top, this.left, this.width, this.height);
         }
+    }], [{
+        key: "configHandler",
+        value: function configHandler(config) {
+            var maxWidth = void 0;
+            var top = 0;
+            var left = 0;
+            var autoHeight = false;
 
-        // undo(ctx, layer) {
-        //     let eachLine = this.eachLine;
-        //     for (let i = eachLine.length - 1; i >= 0; i -= 1) {
-        //         for (let j = eachLine[i].inlineElements.length; j > 0; j -= 1) {
-        //             let line = eachLine[i].inlineElements[j];
-        //             if (line.layer === layer) {
-        //                 delete line[j];
-        //             }
-        //         }
-        //     }
-        //     this.lastReflowIndex -= 1;
-        //     _draw.call(this, ctx);
-        // }
-        //
-        // redo(ctx, collection, maxWidthOrConf) {
-        //     this.draw(ctx, collection, maxWidthOrConf, false);
-        //     this.lastReflowIndex += 1;
-        // }
+            if ((typeof config === "undefined" ? "undefined" : _typeof(config)) === "object") {
+                maxWidth = config.maxWidth || 300;
+                top = config.top || 0;
+                left = config.left || 0;
+                autoHeight = !!config.autoHeight;
+            } else if (!parseInt(config)) {
+                throw Error("Type maxWidth error! expect Number.");
+            } else {
+                maxWidth = parseInt(config) || 300;
+            }
 
+            return { top: top, left: left, maxWidth: maxWidth, autoHeight: autoHeight };
+        }
+
+        /**
+         * @description 获取真实行高 - 把一些倍数行高转换成真实 px 的行高
+         * @param { Number } lineHeight
+         * @param { Number } fontSize
+         * @return { Number }
+         */
+
+    }, {
+        key: "getRealLineHeight",
+        value: function getRealLineHeight(lineHeight, fontSize) {
+            if (typeof lineHeight === "number") {
+                return parseFloat((lineHeight * fontSize).toFixed(2));
+            } else if (typeof lineHeight === "string") {
+                return parseInt(lineHeight);
+            }
+        }
     }]);
     return Renderer;
 }();
@@ -763,17 +873,22 @@ var CTextBox = function () {
 
         this.collection = new TextLayerCollection();
         this.renderer = new Renderer();
-        this.operationStack = [];
     }
+
+    /**
+     * @description 绘图
+     * @param { HTMLCanvasElement | CanvasRenderingContext2D } canvasOrCtx
+     * @param {RendererConfig} option
+     *
+     */
+
 
     createClass(CTextBox, [{
         key: "draw",
-        value: function draw(canvasOrCtx) {
-            var maxWidthOrConf = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 300;
-            var isReflow = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
-
+        value: function draw(canvasOrCtx, option) {
             var canvas = null;
             var ctx = null;
+
             if (canvasOrCtx instanceof HTMLCanvasElement) {
                 canvas = canvasOrCtx;
             } else if (canvasOrCtx instanceof CanvasRenderingContext2D) {
@@ -785,58 +900,17 @@ var CTextBox = function () {
             }
 
             if (ctx) {
-                this.renderer.draw(ctx, this.collection, maxWidthOrConf, isReflow);
+                this.renderer.draw(ctx, this.collection, option);
             } else {
                 throw Error("Argument 1 type error, expected HTMLCanvasElement or CanvasRenderingContext2D");
             }
-        }
-    }, {
-        key: "output",
-        value: function output(canvas, type, format) {}
-    }, {
-        key: "put",
-        value: function put(text, conf) {
-            this.collection.push(new TextLayer(text, conf));
-            return this;
         }
     }, {
         key: "line",
         value: function line(text) {
             var conf = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
-            this.collection.push(new TextLayer(text, extend(conf, { forceNextLine: true })));
-            return this;
-        }
-    }, {
-        key: "undo",
-        value: function undo() {
-            var level = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
-
-            var layers = new TextLayerCollection();
-            while (level--) {
-                var layer = this.collection.pop();
-                if (layer) {
-                    layers.push(layer);
-                    this.operationStack.push(clone_1(layer));
-                } else {
-                    break;
-                }
-            }
-            return layers;
-        }
-    }, {
-        key: "redo",
-        value: function redo() {
-            var level = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
-
-            while (level--) {
-                var layer = this.operationStack.pop();
-                if (layer) {
-                    this.collection.push(layer);
-                } else {
-                    break;
-                }
-            }
+            this.collection.push(new TextLayer(text, extend$1(conf, { forceNextLine: true })));
             return this;
         }
     }]);
