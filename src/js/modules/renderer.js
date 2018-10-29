@@ -108,18 +108,20 @@ function calculate(ctx, collection, config) {
         }];
     }
 
-    // 遍历 collection 中的每个子层，把子层的文本切成一个个合适长度的文本段
     collection.forEach((layer) => {
         ctx.save();
         ctx.font = layer.font;
+        let eachLine = this.eachLine;
+        let eachLineStartIndex = this.eachLine.length;
+        let currentTextPos = 0;
 
         if (layer.forceNextLine) {
             nextLine.apply(this);
         }
 
-        let currentTextPos = 0;
         let suitableText = consultForSuitableText.call(this, ctx, layer, currentTextPos, maxWidth);
 
+        // 把长文字分行
         while (suitableText) {
             // let inlineBoxTop = top + lineHeight * this.currentLine;
             let inlineBoxLeft = this.previousDrawingWidth;
@@ -127,7 +129,7 @@ function calculate(ctx, collection, config) {
             let textWidth = suitableText.textWidth;
 
             currentTextPos = (suitableText.pos += 1);
-            this.eachLine[this.eachLine.length - 1]
+            eachLine[eachLine.length - 1]
                 .inlineElements
                 .push({
                     layer: layer,
@@ -144,6 +146,19 @@ function calculate(ctx, collection, config) {
 
             suitableText = consultForSuitableText.call(this, ctx, layer, currentTextPos, maxWidth);
         }
+
+        if (eachLine[eachLineStartIndex]) {
+            // 标记行开始, 用于 padding-top
+            eachLine[eachLineStartIndex].lineBefore = true;
+
+            // 标记行结束
+            if (eachLine.length - eachLineStartIndex > 1) {
+                eachLine[eachLine.length - 1].lineAfter = true;
+            } else {
+                eachLine[eachLineStartIndex].lineAfter = true;
+            }
+        }
+
         ctx.restore();
     });
 
@@ -152,13 +167,17 @@ function calculate(ctx, collection, config) {
         let lineLineHeight = inlineElements.length > 0 ?
             Math.max.apply(null, inlineElements.map((v) => Renderer.getRealLineHeight(v.layer.lineHeight, v.layer.fontSize))) :
             0;
-        line.lineHeight = lineLineHeight;
+        let paddingTop = line.lineBefore && inlineElements.length > 0 ?
+            Math.max.apply(null, inlineElements.map((v) => v.layer.paddingTop || 0)) : 0;
+
+        line.lineHeight = lineLineHeight + line.lineBefore ? paddingTop : 0;
         line.lineBoxX = left;
         textBoxHeight += line.lineHeight;
         line.lineBoxY = textBoxHeight;
         inlineElements.forEach((el) => {
             let layer = el.layer;
             let layerFontSize = layer.fontSize;
+            // 应用 css 的行高规则，（行高 - 字体大小）除以 2 分别分配给字体的上下两部分
             let deltaY = parseFloat(((lineLineHeight - layerFontSize) / 2).toFixed(2));
 
             el.x = line.lineBoxX + el.inlineBoxLeft;
@@ -172,51 +191,6 @@ function calculate(ctx, collection, config) {
     this.top = top;
     this.left = left;
     this.lastReflowIndex = collection.length - 1;
-}
-
-/**
- * @private
- * @description 核心绘图方法
- * @param {CanvasRenderingContext2D} ctx
- * @param {RendererConfig} config
- */
-function _draw(ctx, config) {
-    if (config.autoHeight) {
-        ctx.canvas.height = this.height;
-    }
-
-    this.eachLine.forEach((line) => {
-        let inlineElements = line.inlineElements;
-        let lineHeight = line.lineHeight; // px
-        inlineElements.forEach((el) => {
-            let layer = el.layer;
-
-            ctx.save();
-            ctx.font = layer.font || ctx.font;
-            // ctx.textAlign = layer.verticalAlign;
-            ctx.fillStyle = layer.color || ctx.fillStyle;
-            ctx.strokeStyle = layer.strokeColor || "transparent";
-            ctx.lineWidth = parseInt(layer.strokeWidth) || ctx.strokeWidth;
-            let paddingTop = layer.padding;
-
-            if (layer.backgroundColor) {
-                let layerFontSize = layer.fontSize;
-                let deltaY = el.deltaY;
-                ctx.save();
-                ctx.fillStyle = layer.backgroundColor;
-                ctx.fillRect(el.x, el.y + paddingTop, el.textWidth, -(layerFontSize + paddingTop));
-                if (DEBUG) {
-                    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
-                    ctx.fillRect(el.x, el.y + deltaY, el.textWidth, -(lineHeight));
-                }
-                ctx.restore();
-            }
-
-            ctx.fillText(el.text, el.x, el.y);
-            layer.strokeColor && ctx.strokeText(el.text, el.x, el.y);
-            ctx.restore();
-        });
-    });
 }
 
 function nextLine() {

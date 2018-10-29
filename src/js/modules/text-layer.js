@@ -21,7 +21,7 @@ const DEFAULT_CONF = {
     lineHeight: 1.5,
     verticalAlign: "alphabetic",
     color: "rgba(0, 0, 0, 1)",
-    padding: 5,
+    paddingTop: 5,
     strokeWidth: 1,
     strokeColor: null,
     backgroundColor: null,
