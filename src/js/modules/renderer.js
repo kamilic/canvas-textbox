@@ -24,65 +24,67 @@ function consultForSuitableText(ctx, layer, currentPos, maxWidth) {
     let resultWidth = textWidth + this.previousDrawingWidth;
 
     if (text.length > 0) {
-        if (resultWidth >= maxWidth) {
-            let oriText = layer.text.slice(currentPos);
-            let pos = oriText.length;
-            let halfPos;
+        // 对于那些很长的段落，我们可以猜想一下它相对较长的子串，来避免过长的切割导致性能低下
+        let sourceTextLengthGuessing = Math.floor(maxWidth / Math.floor(ctx.measureText('x').width));
+        let text = layer.text.slice(currentPos, currentPos + sourceTextLengthGuessing);
+
+        if (text.length > 0) {
+            let oriText = text;
+            // let text = oriText;
+            let pos = text.length;
+            let halfPos = Math.floor(text.length / 2);
             let addOneCharText = oriText;
-            let text = oriText;
-            let addOneCharResultWidth;
-            let resultWidth;
-            let textWidth;
-            let addOneCharTextWidth;
+            let nextChar = "";
+            let nextCharWidth = 0;
+            let textWidth = Math.floor(ctx.measureText(text).width);
+            let addOneCharTextWidth = textWidth;
+            let resultWidth = this.previousDrawingWidth + textWidth;
+            let addOneCharResultWidth = resultWidth;
+            let computedProcess = resultWidth <= maxWidth; // false -> minus processing.
+            let deltaPos = halfPos;
 
-            // 这里用了 二分法 来不断缩减字符直到小于传入宽度
-            do {
-                pos = Math.floor(text.length / 2);
-                halfPos = pos;
-                text = oriText.slice(0, pos);
-                addOneCharText = oriText.slice(0, pos + 1);
-                addOneCharResultWidth = ctx.measureText(addOneCharText).width + this.previousDrawingWidth;
-                textWidth = ctx.measureText(text).width;
-                resultWidth = ctx.measureText(text).width + this.previousDrawingWidth;
-            } while (resultWidth >= maxWidth);
+            if (resultWidth >= maxWidth) {
+                do {
+                    if (computedProcess) {
+                        pos = pos + deltaPos;
+                    } else {
+                        pos = pos - deltaPos;
+                    }
 
-            // 再用了 二分法 来不断增加字符来逼近最大绘图宽度
-            while (!(resultWidth <= maxWidth && addOneCharResultWidth > maxWidth)) {
-                if (halfPos === 1 && resultWidth > maxWidth) {
-                    pos -= 1;
-                } else {
-                    halfPos = Math.ceil(halfPos / 2);
-                    pos = pos + halfPos;
+                    addOneCharText = oriText.slice(0, pos + 1);
+                    text = addOneCharText.slice(0, -1);
+                    nextChar = addOneCharText.slice(-1);
+                    nextCharWidth = Math.floor(ctx.measureText(nextChar).width);
+                    textWidth = Math.floor(ctx.measureText(text).width);
+                    addOneCharTextWidth = textWidth + nextCharWidth;
+                    addOneCharResultWidth = addOneCharTextWidth + this.previousDrawingWidth;
+                    resultWidth = textWidth + this.previousDrawingWidth;
+
+                    deltaPos = Math.floor(deltaPos / 2);
+
+                    if (deltaPos === 0) {
+                        break;
+                    }
+
+                    computedProcess = resultWidth <= maxWidth;
+
+                // 最完美的结果是，加一个字就超过长度，不加就刚刚好
+                } while (!(resultWidth <= maxWidth && addOneCharResultWidth > maxWidth));
+
+                return {
+                    pos: currentPos + pos - 1,
+                    textWidth,
+                    text,
+                    nextLine: true
                 }
-                text = oriText.slice(0, pos);
-                addOneCharText = oriText.slice(0, pos + 1);
-                textWidth = ctx.measureText(text).width;
-                addOneCharTextWidth = ctx.measureText(addOneCharText).width;
-                addOneCharResultWidth = addOneCharTextWidth + this.previousDrawingWidth;
-                resultWidth = textWidth + this.previousDrawingWidth;
+            } else {
+                return {
+                    pos: currentPos + text.length - 1,
+                    textWidth,
+                    text,
+                    nextLine: false
+                };
             }
-
-            /**
-             * @description 计算与宽度最佳匹配行的数据结构
-             * @typedef {Object} SuitableTextResult
-             * @param {Number} pos - 
-             * @param {Number} textWidth
-             * @param {String} text
-             * @param {Boolean} nextLine
-             */
-            return {
-                pos: currentPos + pos - 1,
-                textWidth,
-                text,
-                nextLine: true
-            }
-        } else {
-            return {
-                pos: currentPos + text.length - 1,
-                textWidth,
-                text,
-                nextLine: false
-            };
         }
     } else {
         return null;
