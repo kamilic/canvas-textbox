@@ -1,5 +1,5 @@
 # canvas-textbox
-[![travisCI](https://www.travis-ci.org/kamilic/canvas-textbox.svg?branch=master)](https://www.travis-ci.org/kamilic/canvas-textbox) [![codecov](https://codecov.io/gh/kamilic/canvas-textbox/branch/master/graph/badge.svg)](https://codecov.io/gh/kamilic/canvas-textbox)  
+[![travisCI](https://www.travis-ci.org/kamilic/canvas-textbox.svg?branch=master)](https://www.travis-ci.org/kamilic/canvas-textbox) [![codecov](https://codecov.io/gh/kamilic/canvas-textbox/branch/master/graph/badge.svg)](https://codecov.io/gh/kamilic/canvas-textbox)
 [![npm version](https://badge.fury.io/js/%40kamilic-pkg%2Fcanvas-textbox.svg)](https://badge.fury.io/js/%40kamilic-pkg%2Fcanvas-textbox)
 
 带自动断句换行的 canvas 文本展示框，主要解决中文文本在 canvas 上不能进行换行的问题。
