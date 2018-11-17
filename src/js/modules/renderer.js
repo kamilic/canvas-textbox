@@ -2,11 +2,11 @@ import { DEBUG } from '../common/config';
 
 /**
  * @description 绘图配置
- * @typedef {Object} RendererConfig
- * @param {Number} option.width - 绘图框宽度
- * @param {Number} option.top - 绘图框所在位置
- * @param {Number} option.left - 绘图框所在位置
- * @param {Number} option.autoHeight - 根据算出来的画布高度来设定 canvas 高度
+ * @typedef { Object } RendererConfig
+ * @property { Number } option.width - 绘图框宽度
+ * @property { Number } option.top - 绘图框所在位置
+ * @property { Number } option.left - 绘图框所在位置
+ * @property { Number } option.autoHeight - 根据算出来的画布高度来设定 canvas 高度
  */
 
 
@@ -172,7 +172,7 @@ function calculate(ctx, collection, config) {
         let paddingTop = line.lineBefore && inlineElements.length > 0 ?
             Math.max.apply(null, inlineElements.map((v) => v.layer.paddingTop || 0)) : 0;
 
-        line.lineHeight = lineLineHeight + line.lineBefore ? paddingTop : 0;
+        line.lineHeight = lineLineHeight + (line.lineBefore ? paddingTop : 0);
         line.lineBoxX = left;
         textBoxHeight += line.lineHeight;
         line.lineBoxY = textBoxHeight;
@@ -193,6 +193,51 @@ function calculate(ctx, collection, config) {
     this.top = top;
     this.left = left;
     this.lastReflowIndex = collection.length - 1;
+}
+
+/**
+ * @description 核心绘图方法
+ * @param {CanvasRenderingContext2D} ctx
+ * @private
+ */
+function _draw(ctx, config) {
+    if (config.autoHeight) {
+        ctx.canvas.height = this.height + config.top;
+    }
+    
+    this.eachLine.forEach((line) => {
+        let inlineElements = line.inlineElements;
+        let lineHeight = line.lineHeight; // px
+        inlineElements.forEach((el) => {
+            let layer = el.layer;
+            ctx.save();
+            ctx.font = layer.font || ctx.font;
+            // ctx.textAlign = layer.verticalAlign;
+            ctx.fillStyle = layer.color || ctx.fillStyle;
+            ctx.strokeStyle = layer.strokeColor || "transparent";
+            ctx.lineWidth = parseInt(layer.strokeWidth) || ctx.strokeWidth;
+            
+            if (layer.backgroundColor) {
+                let paddingTop = layer.paddingTop || 0;                
+                let layerFontSize = layer.fontSize;
+                let deltaY = el.deltaY;
+                ctx.save();
+                ctx.fillStyle = layer.backgroundColor;
+                ctx.fillRect(el.x, el.y + paddingTop + deltaY + config.top, el.textWidth, -(layerFontSize + paddingTop + deltaY));
+
+                if (DEBUG) {
+                    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+                    ctx.fillRect(el.x, el.y + deltaY + config.top, el.textWidth, -(lineHeight));
+                }
+                
+                ctx.restore();
+            }
+
+            ctx.fillText(el.text, el.x, el.y + config.top);
+            layer.strokeColor && ctx.strokeText(el.text, el.x, el.y + config.top);
+            ctx.restore();
+        });
+    });
 }
 
 function nextLine() {

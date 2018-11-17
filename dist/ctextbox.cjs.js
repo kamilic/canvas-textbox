@@ -9,7 +9,6 @@ var clone = _interopDefault(require('clone'));
 var _Object$getPrototypeOf = _interopDefault(require('babel-runtime/core-js/object/get-prototype-of'));
 var _possibleConstructorReturn = _interopDefault(require('babel-runtime/helpers/possibleConstructorReturn'));
 var _inherits = _interopDefault(require('babel-runtime/helpers/inherits'));
-var extend$1 = _interopDefault(require('node.extend'));
 var _typeof = _interopDefault(require('babel-runtime/helpers/typeof'));
 
 var constant = {
@@ -24,72 +23,85 @@ var constant = {
  * @description 文字图层的集合
  */
 var TextLayerCollection = function (_Array) {
-    _inherits(TextLayerCollection, _Array);
+	_inherits(TextLayerCollection, _Array);
 
-    function TextLayerCollection() {
-        _classCallCheck(this, TextLayerCollection);
+	function TextLayerCollection() {
+		_classCallCheck(this, TextLayerCollection);
 
-        return _possibleConstructorReturn(this, (TextLayerCollection.__proto__ || _Object$getPrototypeOf(TextLayerCollection)).call(this));
-    }
+		return _possibleConstructorReturn(this, (TextLayerCollection.__proto__ || _Object$getPrototypeOf(TextLayerCollection)).call(this));
+	}
 
-    return TextLayerCollection;
+	return TextLayerCollection;
 }(Array);
 
 /**
  * @description 图层的基础属性
- * @typedef {Object} TextLayerConfigure
- * 
+ * @typedef { Object } TextLayerConfigure
+ * @property { Number } fontSize - 字体大小
+ * @property { String } fontFamily - 字体类型
+ * @property { String | Number } lineHeight - 行高，支持倍数（数字类型）与像素（需传入形如 '12px' 的字符串)
+ * @property { String } verticalAlign - canvas 的 textBaseline 属性，只支持传入 "alphabetic|top|hanging|middle|ideographic|bottom"
+ * @property { String } color - css 支持的颜色表达字符串
+ * @property { Number } strokeWidth - canvas 的 strokeWidth 属性，文字边框宽度
+ * @property { String } strokeColor - canvas 的 strokeColor 属性，文字边框的颜色
+ * @property { String } backgroundColor - 文字背景颜色
+ * @property { Boolean } forceNextLine - 该图层是否强制换行
  */
 var DEFAULT_CONF = {
-    fontSize: 20,
-    fontFamily: "Microsoft YaHei, PingFang SC, Arial",
-    lineHeight: 1.5,
-    verticalAlign: "alphabetic",
-    color: "rgba(0, 0, 0, 1)",
-    paddingTop: 5,
-    strokeWidth: 1,
-    strokeColor: null,
-    backgroundColor: null,
-    forceNextLine: false
+	fontSize: 20,
+	fontFamily: 'Microsoft YaHei, PingFang SC, Arial',
+	lineHeight: 1.5,
+	verticalAlign: 'alphabetic',
+	color: 'rgba(0, 0, 0, 1)',
+	/** 
+     * @deprecated 
+     * */
+	paddingTop: 0,
+	strokeWidth: 1,
+	strokeColor: null,
+	backgroundColor: null,
+	forceNextLine: false
 };
 
 /**
  * @description 文字图层的集合
  */
 var TextLayer = function () {
-    /**
+	/**
      * 
-     * @param {String} text 
-     * @param {TextLayerConfigure} conf 
+     * @param { String } text 
+     * @param { TextLayerConfigure } conf 
      */
-    function TextLayer() {
-        var text = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "";
-        var conf = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : clone(DEFAULT_CONF);
+	function TextLayer() {
+		var text = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+		var conf = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : clone(DEFAULT_CONF);
 
-        _classCallCheck(this, TextLayer);
+		_classCallCheck(this, TextLayer);
 
-        this.textRect = [];
-        conf.text = text;
-        extend$1(this, DEFAULT_CONF, conf);
-    }
+		this.textRect = [];
+		conf.text = text;
+		extend(this, DEFAULT_CONF, conf);
+	}
 
-    _createClass(TextLayer, [{
-        key: "font",
-        get: function get() {
-            return this.fontSize + "px " + this.fontFamily;
-        }
-    }]);
+	_createClass(TextLayer, [{
+		key: 'font',
+		get: function get() {
+			return this.fontSize + 'px ' + this.fontFamily;
+		}
+	}]);
 
-    return TextLayer;
+	return TextLayer;
 }();
+
+var DEBUG = false;
 
 /**
  * @description 绘图配置
- * @typedef {Object} RendererConfig
- * @param {Number} option.width - 绘图框宽度
- * @param {Number} option.top - 绘图框所在位置
- * @param {Number} option.left - 绘图框所在位置
- * @param {Number} option.autoHeight - 根据算出来的画布高度来设定 canvas 高度
+ * @typedef { Object } RendererConfig
+ * @property { Number } option.width - 绘图框宽度
+ * @property { Number } option.top - 绘图框所在位置
+ * @property { Number } option.left - 绘图框所在位置
+ * @property { Number } option.autoHeight - 根据算出来的画布高度来设定 canvas 高度
  */
 
 /**
@@ -259,7 +271,7 @@ function calculate(ctx, collection, config) {
             return v.layer.paddingTop || 0;
         })) : 0;
 
-        line.lineHeight = lineLineHeight + line.lineBefore ? paddingTop : 0;
+        line.lineHeight = lineLineHeight + (line.lineBefore ? paddingTop : 0);
         line.lineBoxX = left;
         textBoxHeight += line.lineHeight;
         line.lineBoxY = textBoxHeight;
@@ -280,6 +292,51 @@ function calculate(ctx, collection, config) {
     this.top = top;
     this.left = left;
     this.lastReflowIndex = collection.length - 1;
+}
+
+/**
+ * @description 核心绘图方法
+ * @param {CanvasRenderingContext2D} ctx
+ * @private
+ */
+function _draw(ctx, config) {
+    if (config.autoHeight) {
+        ctx.canvas.height = this.height + config.top;
+    }
+
+    this.eachLine.forEach(function (line) {
+        var inlineElements = line.inlineElements;
+        var lineHeight = line.lineHeight; // px
+        inlineElements.forEach(function (el) {
+            var layer = el.layer;
+            ctx.save();
+            ctx.font = layer.font || ctx.font;
+            // ctx.textAlign = layer.verticalAlign;
+            ctx.fillStyle = layer.color || ctx.fillStyle;
+            ctx.strokeStyle = layer.strokeColor || "transparent";
+            ctx.lineWidth = parseInt(layer.strokeWidth) || ctx.strokeWidth;
+
+            if (layer.backgroundColor) {
+                var paddingTop = layer.paddingTop || 0;
+                var layerFontSize = layer.fontSize;
+                var deltaY = el.deltaY;
+                ctx.save();
+                ctx.fillStyle = layer.backgroundColor;
+                ctx.fillRect(el.x, el.y + paddingTop + deltaY + config.top, el.textWidth, -(layerFontSize + paddingTop + deltaY));
+
+                if (DEBUG) {
+                    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+                    ctx.fillRect(el.x, el.y + deltaY + config.top, el.textWidth, -lineHeight);
+                }
+
+                ctx.restore();
+            }
+
+            ctx.fillText(el.text, el.x, el.y + config.top);
+            layer.strokeColor && ctx.strokeText(el.text, el.x, el.y + config.top);
+            ctx.restore();
+        });
+    });
 }
 
 function nextLine() {
@@ -436,6 +493,15 @@ var Renderer = function () {
     return Renderer;
 }();
 
+/**
+ * @description 绘图配置
+ * @typedef {Object} RendererConfig
+ * @param {Number} option.width - 绘图框宽度
+ * @param {Number} option.top - 绘图框所在位置
+ * @param {Number} option.left - 绘图框所在位置
+ * @param {Number} option.autoHeight - 根据算出来的画布高度来设定 canvas 高度
+ */
+
 var CTextBox = function () {
     function CTextBox() {
         _classCallCheck(this, CTextBox);
@@ -447,13 +513,13 @@ var CTextBox = function () {
     /**
      * @description 绘图
      * @param { HTMLCanvasElement | CanvasRenderingContext2D } canvasOrCtx
-     * @param {RendererConfig} option
+     * @param { RendererConfig } option
      *
      */
 
 
     _createClass(CTextBox, [{
-        key: "draw",
+        key: 'draw',
         value: function draw(canvasOrCtx, option) {
             var canvas = null;
             var ctx = null;
@@ -465,21 +531,29 @@ var CTextBox = function () {
             }
 
             if (canvas) {
-                ctx = canvasOrCtx.getContext("2d");
+                ctx = canvasOrCtx.getContext('2d');
             }
 
             if (ctx) {
                 this.renderer.draw(ctx, this.collection, option);
             } else {
-                throw Error("Argument 1 type error, expected HTMLCanvasElement or CanvasRenderingContext2D");
+                throw Error('Argument 1 type error, expected HTMLCanvasElement or CanvasRenderingContext2D');
             }
         }
     }, {
-        key: "line",
+        key: 'line',
         value: function line(text) {
             var conf = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
             this.collection.push(new TextLayer(text, extend(conf, { forceNextLine: true })));
+            return this;
+        }
+    }, {
+        key: 'put',
+        value: function put(text) {
+            var conf = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+            this.collection.push(new TextLayer(text, conf));
             return this;
         }
     }]);

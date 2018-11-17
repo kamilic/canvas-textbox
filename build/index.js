@@ -35,7 +35,7 @@ function getProjectName() {
         fs.readFile(packageFilePath, (err, data) => {
             if (!err) {
                 let packageJsonObject = JSON.parse(data.toString());
-                res(packageJsonObject.name);
+                res(packageJsonObject.distFileName);
             } else {
                 rej(err);
             }

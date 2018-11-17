@@ -6,6 +6,39 @@
     <script src="../dist/ctextbox.js"></script>
 </head>
 <body>
-    <canvas id="canvas" width="500" height="500"></canvas>
+<canvas id="mycanvas" width="500" height="500"></canvas>
 </body>
+<script>
+    let tb = new Ctextbox();
+    let canvas = document.getElementById("mycanvas");
+    tb.put("hello world", {
+        fontFamily: "Arial",
+        fontSize: 22,
+        lineHeight: 1.5,
+        color: "rgba(0, 255, 0, 1)",
+        strokeWidth: 1,
+        strokeColor: "rgba(0, 0, 255, 1)"
+    }).put("   - append to ", {
+        fontFamily: "Arial",
+        fontSize: 28,
+        lineHeight: 1.5,
+        strokeWidth: 1,
+        backgroundColor: 'red',
+        strokeColor: "rgba(0, 0, 255, 1)"
+    }).put("tototototo nexttttttttttttttttttttttttttttttttttttttttttttttttttt", {
+        fontFamily: "Arial",
+        fontSize: 28,
+        lineHeight: 1.5,
+        strokeWidth: 1,
+        backgroundColor: 'red',
+        strokeColor: "rgba(0, 0, 255, 1)"
+    }).line("a long text a long text a long text a long text a long text a long text a long text ", {
+        backgroundColor: "rgba(0, 255, 0, 1)",
+    }).draw(canvas, {
+        top: 30,
+        left: 250,
+        maxWidth: 200,
+        autoHeight: true
+    });
+</script>
 </html>
