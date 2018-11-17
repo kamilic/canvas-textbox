@@ -1,5 +1,5 @@
 {
-	"name": "@kamilic/canva-textbox",
+	"name": "@kamilic-pkg/canvas-textbox",
 	"version": "1.0.0",
 	"description": "Automatically line-breaking textbox for painting chinese in canvas.",
 	"main": "./dist/ctextbox.umd.js",
