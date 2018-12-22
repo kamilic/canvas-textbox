@@ -157,6 +157,16 @@ function consultForSuitableText(ctx, layer, currentPos, maxWidth) {
                     deltaPos = Math.floor(deltaPos / 2);
 
                     if (deltaPos === 0) {
+                        var _textWidth2 = _text.length;
+
+                        // 如果还是比较长的话，就再一直砍一个字，直到符合为止
+                        while (!(_resultWidth <= maxWidth) && pos !== 0) {
+                            pos -= 1;
+                            _text = oriText.slice(0, pos);
+                            _textWidth2 = Math.floor(ctx.measureText(_text).width);
+                            _resultWidth = _textWidth2 + this.previousDrawingWidth;
+                        }
+
                         break;
                     }
 
@@ -496,10 +506,10 @@ var Renderer = function () {
 /**
  * @description 绘图配置
  * @typedef {Object} RendererConfig
- * @param {Number} option.width - 绘图框宽度
- * @param {Number} option.top - 绘图框所在位置
- * @param {Number} option.left - 绘图框所在位置
- * @param {Number} option.autoHeight - 根据算出来的画布高度来设定 canvas 高度
+ * @property {Number} width - 绘图框宽度
+ * @property {Number} top - 绘图框所在位置
+ * @property {Number} left - 绘图框所在位置
+ * @property {Number} autoHeight - 根据算出来的画布高度来设定 canvas 高度
  */
 
 var CTextBox = function () {

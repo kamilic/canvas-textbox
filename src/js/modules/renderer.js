@@ -63,6 +63,16 @@ function consultForSuitableText(ctx, layer, currentPos, maxWidth) {
                     deltaPos = Math.floor(deltaPos / 2);
 
                     if (deltaPos === 0) {
+                        let textWidth = text.length;
+                        
+                        // 如果还是比较长的话，就再一直砍一个字，直到符合为止
+                        while (!(resultWidth <= maxWidth) && pos !== 0) {
+                            pos -= 1;
+                            text = oriText.slice(0, pos);
+                            textWidth = Math.floor(ctx.measureText(text).width);
+                            resultWidth = textWidth + this.previousDrawingWidth;
+                        }
+
                         break;
                     }
 
